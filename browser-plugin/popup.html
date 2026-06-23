@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 380px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8f9fa;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 16px;
+      text-align: center;
+    }
+    .header h1 { font-size: 18px; }
+    .header p { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+    .content { padding: 12px; }
+    .product-card {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .product-card h3 { font-size: 14px; margin-bottom: 6px; color: #333; }
+    .product-card .meta { font-size: 12px; color: #666; }
+    .product-card .meta span { margin-right: 12px; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .btn-secondary {
+      background: #e9ecef;
+      color: #495057;
+    }
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+    .status {
+      text-align: center;
+      font-size: 12px;
+      color: #666;
+      padding: 8px;
+    }
+    .status.success { color: #28a745; }
+    .status.error { color: #dc3545; }
+    .platform-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      background: #e8f4fd;
+      color: #0066cc;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>商品采集助手</h1>
+    <p>一键采集多平台商品信息</p>
+  </div>
+  <div class="content">
+    <div id="currentProduct" class="product-card" style="display:none;">
+      <h3 id="productTitle"></h3>
+      <div class="meta">
+        <span id="productPlatform" class="platform-badge"></span>
+        <span id="productPrice"></span>
+      </div>
+    </div>
+    <div id="noProduct" class="product-card" style="text-align:center;color:#999;">
+      <p>未检测到商品信息</p>
+      <p style="font-size:12px;margin-top:4px;">请在有商品的页面点击插件图标</p>
+    </div>
+    <button id="btnExtract" class="btn btn-primary">采集当前商品</button>
+    <button id="btnImport" class="btn btn-success">导入到系统</button>
+    <button id="btnOpenSystem" class="btn btn-secondary">打开管理系统</button>
+    <div id="status" class="status"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

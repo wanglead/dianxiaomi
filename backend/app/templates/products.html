@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+{% block title %}商品工作台{% endblock %}
+{% block content %}
+<section class="space-y-4">
+  <div class="bg-white border border-slate-200 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+    <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="fas fa-store"></i></div>
+    <div class="w-28"><div class="text-xs text-slate-400">写入目的地</div><div class="font-semibold">店小秘</div></div>
+    <select id="targetStore" class="h-10 flex-1 max-w-xl border border-slate-200 rounded-md px-3 text-sm bg-white">
+      <option>Temu半托管 / 半托-1</option><option>速卖通 / 官方店</option><option>Ozon / 主店</option><option>Joom / 默认店</option><option>Shopify / Online Store</option>
+    </select>
+    <span class="text-xs text-emerald-600 mr-auto">浏览器登录态 · 插件半自动写入</span>
+    <button onclick="processSelected()" class="h-10 px-4 rounded-md bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"><i class="fas fa-wand-magic-sparkles mr-2"></i>AI处理</button>
+    <label class="flex items-center gap-2 text-sm border-l pl-4"><span>自动生成</span><input id="autoProcess" type="checkbox" checked class="accent-blue-600 w-4 h-4"></label>
+    <label class="flex items-center gap-2 text-sm"><span>自动上传</span><input type="checkbox" class="accent-blue-600 w-4 h-4"></label>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+    <div class="grid grid-cols-4 px-6 py-4 border-b border-slate-100 text-sm font-semibold">
+      <div class="text-blue-600"><span class="inline-flex w-6 h-6 rounded-full bg-blue-600 text-white items-center justify-center mr-2">1</span>采集商品</div>
+      <div><span class="inline-flex w-6 h-6 rounded-full bg-slate-300 text-white items-center justify-center mr-2">2</span>AI处理</div>
+      <div><span class="inline-flex w-6 h-6 rounded-full bg-slate-300 text-white items-center justify-center mr-2">3</span>确认结果</div>
+      <div><span class="inline-flex w-6 h-6 rounded-full bg-slate-300 text-white items-center justify-center mr-2">4</span>移入待发布</div>
+    </div>
+
+    <div class="p-4 flex gap-3 border-b border-slate-100">
+      <div class="relative flex-1"><i class="fas fa-search absolute left-3 top-3 text-slate-400"></i><input id="searchInput" class="w-full h-10 pl-9 pr-3 border border-slate-200 rounded-md text-sm" placeholder="搜索商品标题"></div>
+      <select id="sourceFilter" class="h-10 w-44 border border-slate-200 rounded-md px-3 text-sm"><option value="">来源：全部来源</option><option value="browser_plugin">浏览器插件</option><option value="url_input">链接采集</option><option value="system_recommend">系统推荐</option></select>
+      <select id="statusFilter" class="h-10 w-44 border border-slate-200 rounded-md px-3 text-sm"><option value="">状态：全部状态</option><option value="collected">已采集</option><option value="processed">图片已生成</option><option value="sync_pending">待写入</option><option value="syncing">写入中</option><option value="listed">已上架</option><option value="failed">失败</option></select>
+      <button onclick="resetFilters()" title="重置筛选" class="h-10 w-10 border border-slate-200 rounded-md text-blue-600"><i class="fas fa-rotate-left"></i></button>
+      <button onclick="loadProducts()" title="刷新" class="h-10 w-10 border border-slate-200 rounded-md text-blue-600"><i class="fas fa-rotate"></i></button>
+    </div>
+
+    <div class="px-4 py-3 flex items-center gap-3 text-sm border-b border-slate-100">
+      <strong>共 <span id="totalCount">0</span> 条</strong><span class="text-slate-500">已选 <b id="selectedCount" class="text-blue-600">0</b> 个</span>
+      <span class="text-slate-500">可处理 <b id="processableCount" class="text-blue-600">0</b> 个</span><span class="text-slate-500">可写入 <b id="syncableCount" class="text-emerald-600">0</b> 个</span>
+      <div class="ml-auto flex gap-2"><button onclick="processSelected()" class="px-3 py-2 rounded-md bg-blue-50 text-blue-700 font-medium"><i class="fas fa-images mr-1"></i>一键补图</button><button onclick="prepareSelected()" class="px-3 py-2 rounded-md bg-emerald-50 text-emerald-700 font-medium"><i class="fas fa-store mr-1"></i>一键写入</button><button onclick="clearSelection()" class="px-3 py-2 rounded-md border">清空</button></div>
+    </div>
+
+    <div class="grid grid-cols-[40px_64px_minmax(160px,1.4fr)_70px_55px_90px_115px_minmax(120px,1fr)_155px] px-4 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 items-center">
+      <input id="selectAll" type="checkbox" onchange="toggleAll(this.checked)" class="accent-blue-600"><span>商品图片</span><span>标题</span><span>来源</span><span>负责人</span><span>采集时间</span><span>状态 / 图片进度</span><span>问题提示</span><span class="text-right">操作</span>
+    </div>
+    <div id="productList" class="divide-y divide-slate-100 min-h-[320px]"><p class="p-10 text-center text-slate-400">加载中...</p></div>
+    <div class="p-3 flex justify-end items-center gap-3 border-t text-sm"><button onclick="goPage(currentPage-1)" class="w-8 h-8 border rounded" title="上一页"><i class="fas fa-chevron-left"></i></button><span id="pageLabel">1 / 1</span><button onclick="goPage(currentPage+1)" class="w-8 h-8 border rounded" title="下一页"><i class="fas fa-chevron-right"></i></button></div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+let currentPage=1,totalPages=1,loadedItems=[],selectedIds=new Set();
+const labels={collected:'待AI处理',processing:'处理中',processed:'图片已生成',sync_pending:'待插件写入',syncing:'写入中',listed:'已上架',failed:'处理失败',edited:'已编辑'};
+const tones={collected:'bg-amber-50 text-amber-700',processed:'bg-emerald-50 text-emerald-700',sync_pending:'bg-blue-50 text-blue-700',syncing:'bg-blue-50 text-blue-700',listed:'bg-emerald-50 text-emerald-700',failed:'bg-red-50 text-red-700'};
+function escapeHtml(value){const d=document.createElement('div');d.textContent=value??'';return d.innerHTML;}
+function progress(p){const v=p.image_progress||{},done=v.done||0,total=v.total||6,percent=Math.min(100,Math.round(done/total*100));return `<div class="mt-1 flex items-center gap-2 text-xs"><b class="text-blue-700">${done}/${total}</b><span class="w-16 h-1.5 bg-slate-100 rounded overflow-hidden"><i class="block h-full bg-blue-600" style="width:${percent}%"></i></span></div>`;}
+async function loadProducts(){
+ const q=new URLSearchParams({page:currentPage,page_size:10}),search=searchInput.value.trim(),status=statusFilter.value,source=sourceFilter.value;if(search)q.set('keyword',search);if(status)q.set('status',status);
+ try{const data=await api('/api/products?'+q);loadedItems=(data.items||[]).filter(p=>!source||p.collection_method===source);totalPages=Math.max(1,Math.ceil((data.total||0)/10));totalCount.textContent=data.total||0;selectedCount.textContent=selectedIds.size;processableCount.textContent=loadedItems.filter(p=>['collected','failed'].includes(p.status)).length;syncableCount.textContent=loadedItems.filter(p=>['processed','sync_pending'].includes(p.status)).length;pageLabel.textContent=`${currentPage} / ${totalPages}`;render();}catch(e){productList.innerHTML=`<p class="p-10 text-center text-red-500">加载失败：${escapeHtml(e.message)}</p>`;}
+}
+function render(){if(!loadedItems.length){productList.innerHTML='<p class="p-10 text-center text-slate-400">暂无商品，请先从商品采集页或浏览器插件导入</p>';return;}productList.innerHTML=loadedItems.map(p=>`<div class="grid grid-cols-[40px_64px_minmax(160px,1.4fr)_70px_55px_90px_115px_minmax(120px,1fr)_155px] px-4 py-3 items-center text-sm ${selectedIds.has(p.id)?'bg-blue-50':'bg-white hover:bg-slate-50'}"><input type="checkbox" ${selectedIds.has(p.id)?'checked':''} onchange="toggleSelect(${p.id},this.checked)" class="accent-blue-600"><div class="w-12 h-12 rounded-md bg-slate-100 overflow-hidden flex items-center justify-center">${p.images?.[0]?`<img src="${escapeHtml(p.images[0])}" class="w-full h-full object-cover">`:'<i class="fas fa-box text-slate-300"></i>'}</div><div class="min-w-0 pr-3"><div class="font-semibold truncate">${escapeHtml(p.title)}</div><div class="text-xs text-slate-400 truncate mt-1">原始：${escapeHtml(p.description||p.source_url||'-')}</div></div><span class="truncate">${escapeHtml(p.source_platform||p.collection_method||'-')}</span><span class="text-slate-500">${escapeHtml(p.owner||'aa')}</span><span class="text-slate-500 text-xs">${new Date(p.created_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</span><div><span class="px-2 py-1 rounded text-xs ${tones[p.status]||'bg-slate-100'}">${labels[p.status]||p.status}</span>${progress(p)}</div><div class="text-xs ${p.sync_error?'text-red-600':'text-slate-500'}">${escapeHtml(p.sync_error||p.issue_message||'等待开始处理')}</div><div class="flex justify-end gap-1"><button onclick="processIds([${p.id}])" class="px-2 py-1.5 bg-blue-600 text-white rounded text-xs">AI处理</button><button onclick="prepareIds([${p.id}])" class="px-2 py-1.5 bg-emerald-50 text-emerald-700 rounded text-xs">写入</button><button onclick="removeProduct(${p.id})" title="删除" class="w-7 h-7 text-red-500"><i class="fas fa-trash"></i></button></div></div>`).join('');selectedCount.textContent=selectedIds.size;}
+window.toggleSelect=(id,on)=>{on?selectedIds.add(id):selectedIds.delete(id);render();};window.toggleAll=on=>{selectedIds=on?new Set(loadedItems.map(p=>p.id)):new Set();render();};window.clearSelection=()=>{selectedIds.clear();selectAll.checked=false;render();};
+async function processIds(ids){if(!ids.length)return alert('请先选择商品');await api('/api/products/process',{method:'POST',body:JSON.stringify({product_ids:ids,mode:'image_fill'})});await loadProducts();}
+async function prepareIds(ids){if(!ids.length)return alert('请先选择商品');await api('/api/products/sync/dianxiaomi/prepare',{method:'POST',body:JSON.stringify({product_ids:ids,target_store:targetStore.value})});await loadProducts();}
+window.processSelected=()=>processIds([...selectedIds]);window.prepareSelected=()=>prepareIds([...selectedIds]);window.processIds=processIds;window.prepareIds=prepareIds;
+window.removeProduct=async id=>{if(confirm('确定删除该商品？')){await api('/api/products/'+id,{method:'DELETE'});selectedIds.delete(id);loadProducts();}};
+window.resetFilters=()=>{searchInput.value='';sourceFilter.value='';statusFilter.value='';currentPage=1;loadProducts();};window.goPage=p=>{if(p<1||p>totalPages)return;currentPage=p;loadProducts();};
+['searchInput','sourceFilter','statusFilter'].forEach(id=>document.getElementById(id).addEventListener(id==='searchInput'?'input':'change',()=>{currentPage=1;loadProducts();}));loadProducts();
+</script>
+{% endblock %}

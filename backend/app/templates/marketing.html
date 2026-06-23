@@ -1,0 +1,91 @@
+{% extends "layout.html" %}
+{% block title %}营销优化{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-gray-800">营销优化</h1>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- 选择商品 -->
+  <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+    <h2 class="font-semibold text-gray-700 mb-3"><i class="fas fa-cube text-brand-500 mr-2"></i>选择商品</h2>
+    <select id="mkProduct" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm mb-3"></select>
+    <div class="space-y-3">
+      <div><label class="text-sm text-gray-600 block mb-1">文案风格</label>
+        <select id="mkStyle" class="w-full px-3 py-2 border rounded-lg text-sm">
+          <option value="professional">专业详细</option><option value="social">社交媒体</option><option value="concise">简洁明了</option>
+        </select></div>
+      <div><label class="text-sm text-gray-600 block mb-1">目标平台</label>
+        <select id="mkPlatform" class="w-full px-3 py-2 border rounded-lg text-sm">
+          <option value="">通用</option><option value="aliexpress">速卖通</option><option value="ozon">Ozon</option><option value="joom">Joom</option><option value="shopify">Shopify</option>
+        </select></div>
+      <button onclick="generateMarketing()" class="w-full py-2 text-sm rounded-lg bg-purple-600 text-white hover:bg-purple-700"><i class="fas fa-magic mr-1"></i>生成营销内容</button>
+    </div>
+    <div id="mkStatus" class="mt-2 text-xs"></div>
+  </div>
+
+  <!-- 营销结果 -->
+  <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+    <h2 class="font-semibold text-gray-700 mb-3"><i class="fas fa-file-alt text-brand-500 mr-2"></i>营销内容</h2>
+    <div id="mkResult" class="space-y-4 text-sm">
+      <p class="text-gray-400">生成营销内容后将在此显示</p>
+    </div>
+  </div>
+</div>
+
+<!-- 定价建议 -->
+<div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mt-6">
+  <h2 class="font-semibold text-gray-700 mb-4"><i class="fas fa-tags text-brand-500 mr-2"></i>定价建议</h2>
+  <div class="flex gap-3 items-end flex-wrap">
+    <div><label class="text-xs text-gray-500 block mb-1">商品</label><select id="priceProduct" class="px-3 py-2 border rounded-lg text-sm"></select></div>
+    <div><label class="text-xs text-gray-500 block mb-1">目标平台</label><select id="pricePlatform" class="px-3 py-2 border rounded-lg text-sm"><option value="aliexpress">速卖通</option><option value="ozon">Ozon</option><option value="joom">Joom</option><option value="shopify">Shopify</option></select></div>
+    <div><label class="text-xs text-gray-500 block mb-1">目标利润率</label><input id="priceMargin" type="number" value="1.3" step="0.1" class="px-3 py-2 border rounded-lg text-sm w-20"></div>
+    <button onclick="getPriceSuggestion()" class="px-4 py-2 text-sm rounded-lg bg-brand-600 text-white hover:bg-brand-700">计算</button>
+  </div>
+  <div id="priceResult" class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadProductsForSelect() {
+  try {
+    const data = await api('/api/products?page_size=100');
+    const opts = (data.items || []).map(p => '<option value="' + p.id + '">' + (p.title || '未命名').substring(0, 40) + '</option>').join('');
+    document.getElementById('mkProduct').innerHTML = opts;
+    document.getElementById('priceProduct').innerHTML = opts;
+  } catch(e) {}
+}
+
+async function generateMarketing() {
+  const pid = document.getElementById('mkProduct').value;
+  if (!pid) { setMkStatus('请先选择商品', 'text-red-500'); return; }
+  setMkStatus('生成中...', 'text-brand-500');
+  try {
+    const r = await api('/api/marketing/generate', {method:'POST', body: JSON.stringify({product_id: parseInt(pid), style: document.getElementById('mkStyle').value, target_platform: document.getElementById('mkPlatform').value})});
+    const el = document.getElementById('mkResult');
+    el.innerHTML = '<div><h3 class="font-medium text-gray-700 mb-1">优化标题</h3><p class="text-gray-600 bg-gray-50 p-2 rounded">' + (r.optimized_title || '-') + '</p></div>' +
+      '<div><h3 class="font-medium text-gray-700 mb-1">营销文案</h3><pre class="text-gray-600 bg-gray-50 p-2 rounded whitespace-pre-wrap text-xs">' + (r.marketing_copy || '-') + '</pre></div>' +
+      '<div><h3 class="font-medium text-gray-700 mb-1">关键词</h3><div class="flex flex-wrap gap-1">' + (r.keywords || []).map(k => '<span class="px-2 py-0.5 bg-brand-100 text-brand-700 rounded-full text-xs">' + k + '</span>').join('') + '</div></div>';
+    setMkStatus('生成完成', 'text-green-600');
+  } catch(e) { setMkStatus('生成失败: ' + e.message, 'text-red-500'); }
+}
+function setMkStatus(msg, cls) { const el = document.getElementById('mkStatus'); el.textContent = msg; el.className = 'mt-2 text-xs ' + cls; }
+
+async function getPriceSuggestion() {
+  const pid = document.getElementById('priceProduct').value;
+  if (!pid) return;
+  try {
+    const platform = document.getElementById('pricePlatform').value;
+    const margin = document.getElementById('priceMargin').value;
+    const r = await api('/api/marketing/price-suggestion?product_id=' + pid + '&platform=' + platform + '&margin=' + margin);
+    const el = document.getElementById('priceResult');
+    el.innerHTML = '<div class="bg-gray-50 p-3 rounded-lg text-center"><div class="text-xs text-gray-500">原始价格</div><div class="text-lg font-bold text-gray-700">¥' + r.original_price + '</div></div>' +
+      '<div class="bg-brand-50 p-3 rounded-lg text-center"><div class="text-xs text-gray-500">建议售价</div><div class="text-lg font-bold text-brand-600">¥' + r.suggested_price + '</div></div>' +
+      '<div class="bg-green-50 p-3 rounded-lg text-center"><div class="text-xs text-gray-500">估计利润</div><div class="text-lg font-bold text-green-600">¥' + r.estimated_profit + '</div></div>' +
+      '<div class="bg-amber-50 p-3 rounded-lg text-center"><div class="text-xs text-gray-500">平台费率</div><div class="text-lg font-bold text-amber-600">' + (r.platform_fee_rate * 100) + '%</div></div>';
+  } catch(e) { document.getElementById('priceResult').innerHTML = '<p class="text-red-400 text-sm">' + e.message + '</p>'; }
+}
+
+loadProductsForSelect();
+</script>
+{% endblock %}

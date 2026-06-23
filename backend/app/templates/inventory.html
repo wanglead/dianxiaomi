@@ -1,0 +1,151 @@
+{% extends "layout.html" %}
+{% block title %}库存管理{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-gray-800">库存管理</h1>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- 入库操作 -->
+  <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+    <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mb-3"><i class="fas fa-arrow-down text-green-600"></i></div>
+    <h2 class="font-semibold text-gray-800 mb-3">入库</h2>
+    <div class="space-y-2">
+      <select id="inboundProduct" class="w-full px-3 py-2 border rounded-lg text-sm"></select>
+      <input id="inboundQty" type="number" min="1" placeholder="入库数量" class="w-full px-3 py-2 border rounded-lg text-sm">
+      <input id="inboundRemark" placeholder="备注（可选）" class="w-full px-3 py-2 border rounded-lg text-sm">
+      <button onclick="inbound()" class="w-full py-2 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700">确认入库</button>
+      <div id="inboundResult" class="text-xs"></div>
+    </div>
+  </div>
+
+  <!-- 出库操作 -->
+  <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+    <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center mb-3"><i class="fas fa-arrow-up text-red-600"></i></div>
+    <h2 class="font-semibold text-gray-800 mb-3">出库</h2>
+    <div class="space-y-2">
+      <select id="outboundProduct" class="w-full px-3 py-2 border rounded-lg text-sm"></select>
+      <input id="outboundQty" type="number" min="1" placeholder="出库数量" class="w-full px-3 py-2 border rounded-lg text-sm">
+      <input id="outboundRemark" placeholder="备注（可选）" class="w-full px-3 py-2 border rounded-lg text-sm">
+      <button onclick="outbound()" class="w-full py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700">确认出库</button>
+      <div id="outboundResult" class="text-xs"></div>
+    </div>
+  </div>
+
+  <!-- 库存预警 -->
+  <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+    <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center mb-3"><i class="fas fa-bell text-amber-600"></i></div>
+    <h2 class="font-semibold text-gray-800 mb-3">库存预警</h2>
+    <div class="space-y-2">
+      <select id="alertProduct" class="w-full px-3 py-2 border rounded-lg text-sm"></select>
+      <input id="alertMin" type="number" min="0" placeholder="最低库存预警" value="10" class="w-full px-3 py-2 border rounded-lg text-sm">
+      <input id="alertMax" type="number" min="0" placeholder="最高库存预警（0=不限）" value="0" class="w-full px-3 py-2 border rounded-lg text-sm">
+      <button onclick="setAlert()" class="w-full py-2 text-sm rounded-lg bg-amber-600 text-white hover:bg-amber-700">设置预警</button>
+      <div id="alertResult" class="text-xs"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 库存变动记录 -->
+<div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mt-6">
+  <h2 class="font-semibold text-gray-700 mb-4"><i class="fas fa-history text-brand-500 mr-2"></i>库存变动记录</h2>
+  <div id="recordsTable" class="text-sm"><p class="text-gray-400">加载中...</p></div>
+</div>
+
+<!-- 触发预警的商品 -->
+<div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mt-6">
+  <h2 class="font-semibold text-gray-700 mb-4"><i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>预警提醒</h2>
+  <div id="alertList" class="text-sm"><p class="text-gray-400">加载中...</p></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadProducts() {
+  try {
+    const data = await api('/api/products?page_size=200');
+    const opts = (data.items || []).map(p => '<option value="' + p.id + '">' + (p.title || '未命名').substring(0, 40) + ' (库存:' + (p.stock||0) + ')</option>').join('');
+    document.getElementById('inboundProduct').innerHTML = opts;
+    document.getElementById('outboundProduct').innerHTML = opts;
+    document.getElementById('alertProduct').innerHTML = opts;
+  } catch(e) {}
+}
+
+async function inbound() {
+  const pid = document.getElementById('inboundProduct').value;
+  const qty = document.getElementById('inboundQty').value;
+  if (!pid || !qty) { showResult('inboundResult', '请选择商品并填写数量', 'text-red-500'); return; }
+  try {
+    const r = await api('/api/inventory/inbound?product_id=' + pid + '&quantity=' + qty + '&remark=' + encodeURIComponent(document.getElementById('inboundRemark').value));
+    showResult('inboundResult', '入库成功：' + r.before_stock + ' → ' + r.after_stock, 'text-green-600');
+    loadProducts(); loadRecords();
+  } catch(e) { showResult('inboundResult', '入库失败：' + e.message, 'text-red-500'); }
+}
+
+async function outbound() {
+  const pid = document.getElementById('outboundProduct').value;
+  const qty = document.getElementById('outboundQty').value;
+  if (!pid || !qty) { showResult('outboundResult', '请选择商品并填写数量', 'text-red-500'); return; }
+  try {
+    const r = await api('/api/inventory/outbound?product_id=' + pid + '&quantity=' + qty + '&remark=' + encodeURIComponent(document.getElementById('outboundRemark').value));
+    showResult('outboundResult', '出库成功：' + r.before_stock + ' → ' + r.after_stock, 'text-green-600');
+    loadProducts(); loadRecords();
+  } catch(e) { showResult('outboundResult', '出库失败：' + e.message, 'text-red-500'); }
+}
+
+async function setAlert() {
+  const pid = document.getElementById('alertProduct').value;
+  if (!pid) { showResult('alertResult', '请选择商品', 'text-red-500'); return; }
+  try {
+    const r = await api('/api/inventory/alerts', {method:'POST', body: JSON.stringify({product_id: parseInt(pid), min_stock: parseInt(document.getElementById('alertMin').value)||0, max_stock: parseInt(document.getElementById('alertMax').value)||0})});
+    showResult('alertResult', '预警设置成功', 'text-green-600');
+    loadAlerts();
+  } catch(e) { showResult('alertResult', '设置失败：' + e.message, 'text-red-500'); }
+}
+
+function showResult(id, msg, cls) { const el = document.getElementById(id); el.textContent = msg; el.className = 'text-xs mt-1 ' + cls; }
+
+async function loadRecords() {
+  try {
+    const data = await api('/api/inventory/records?limit=30');
+    const el = document.getElementById('recordsTable');
+    if (!data.records?.length) { el.innerHTML = '<p class="text-gray-400">暂无记录</p>'; return; }
+    el.innerHTML = '<table class="w-full"><thead><tr class="text-left text-gray-500 border-b"><th class="pb-2">商品</th><th class="pb-2">类型</th><th class="pb-2">变动</th><th class="pb-2">库存变化</th><th class="pb-2">备注</th><th class="pb-2">时间</th></tr></thead><tbody>' +
+      data.records.map(r => '<tr class="border-b border-gray-50 hover:bg-gray-50"><td class="py-2">' + (r.product_title || '').substring(0, 30) + '</td>' +
+        '<td class="py-2"><span class="px-2 py-0.5 rounded-full text-xs ' + (r.change_type === 'inbound' ? 'bg-green-100 text-green-700' : r.change_type === 'outbound' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700') + '">' + r.change_type + '</span></td>' +
+        '<td class="py-2 font-medium ' + (r.quantity > 0 ? 'text-green-600' : 'text-red-600') + '">' + (r.quantity > 0 ? '+' : '') + r.quantity + '</td>' +
+        '<td class="py-2 text-gray-500">' + r.before_stock + ' → ' + r.after_stock + '</td>' +
+        '<td class="py-2 text-gray-400 text-xs">' + (r.remark || '-') + '</td>' +
+        '<td class="py-2 text-gray-400 text-xs">' + (r.created_at ? new Date(r.created_at).toLocaleString() : '') + '</td></tr>').join('') +
+      '</tbody></table>';
+  } catch(e) { document.getElementById('recordsTable').innerHTML = '<p class="text-red-400">' + e.message + '</p>'; }
+}
+
+async function loadAlerts() {
+  try {
+    const data = await api('/api/inventory/alerts');
+    const el = document.getElementById('alertList');
+    const triggered = data.alerts?.filter(a => a.triggered) || [];
+    if (!triggered.length) { el.innerHTML = '<p class="text-gray-400">暂无预警</p>'; return; }
+    el.innerHTML = '<div class="space-y-2">' + triggered.map(a => '<div class="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">' +
+      '<div><span class="text-sm text-gray-700">' + (a.product_title || '').substring(0, 30) + '</span><span class="text-xs text-gray-400 ml-2">当前库存: ' + a.current_stock + '</span></div>' +
+      '<span class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full">低于预警线 ' + a.min_stock + '</span></div>').join('') + '</div>';
+  } catch(e) { document.getElementById('alertList').innerHTML = '<p class="text-red-400">' + e.message + '</p>'; }
+}
+
+// 侧边栏加库存入口
+document.addEventListener('DOMContentLoaded', () => {
+  const nav = document.querySelector('nav');
+  if (nav) {
+    const li = document.createElement('a');
+    li.href = '/inventory';
+    li.className = 'sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-brand-50 transition-colors' + (window.location.pathname === '/inventory' ? ' active' : '');
+    li.innerHTML = '<i class=\'fas fa-warehouse w-5 text-center\'></i><span>库存管理</span>';
+    nav.appendChild(li);
+  }
+});
+
+loadProducts();
+loadRecords();
+loadAlerts();
+</script>
+{% endblock %}

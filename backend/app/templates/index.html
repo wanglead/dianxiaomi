@@ -1,0 +1,114 @@
+{% extends "layout.html" %}
+{% block title %}工作台 - 商品管理系统{% endblock %}
+{% block content %}
+{% set active = 'dashboard' %}
+
+<div class="fade-in">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">工作台</h1>
+    <p class="text-sm text-gray-500">{{ now }}</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 card-hover transition">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-medium text-gray-500">商品总数</span>
+        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center"><i class="fas fa-cube text-blue-600"></i></div>
+      </div>
+      <div class="text-3xl font-bold text-gray-800" id="statTotal">-</div>
+      <div class="text-xs text-gray-400 mt-1">全部商品</div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 card-hover transition">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-medium text-gray-500">待编辑</span>
+        <div class="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center"><i class="fas fa-edit text-yellow-600"></i></div>
+      </div>
+      <div class="text-3xl font-bold text-gray-800" id="statCollected">-</div>
+      <div class="text-xs text-gray-400 mt-1">已采集待处理</div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 card-hover transition">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-medium text-gray-500">已上架</span>
+        <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center"><i class="fas fa-check-circle text-green-600"></i></div>
+      </div>
+      <div class="text-3xl font-bold text-gray-800" id="statListed">-</div>
+      <div class="text-xs text-gray-400 mt-1">成功上架</div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 card-hover transition">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-medium text-gray-500">平台账号</span>
+        <div class="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center"><i class="fas fa-plug text-purple-600"></i></div>
+      </div>
+      <div class="text-3xl font-bold text-gray-800" id="statAccounts">-</div>
+      <div class="text-xs text-gray-400 mt-1">已配置</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h2 class="text-base font-semibold text-gray-800 mb-4"><i class="fas fa-clock text-brand-500 mr-2"></i>最近采集任务</h2>
+      <div id="recentTasks" class="space-y-2"><p class="text-gray-400 text-sm">加载中...</p></div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h2 class="text-base font-semibold text-gray-800 mb-4"><i class="fas fa-fire text-orange-500 mr-2"></i>快速操作</h2>
+      <div class="grid grid-cols-2 gap-3">
+        <a href="/collection" class="p-4 rounded-lg bg-brand-50 hover:bg-brand-100 transition text-center">
+          <i class="fas fa-link text-brand-600 text-xl mb-1"></i>
+          <div class="text-sm font-medium text-brand-700">链接采集</div>
+        </a>
+        <a href="/collection" class="p-4 rounded-lg bg-blue-50 hover:bg-blue-100 transition text-center">
+          <i class="fas fa-microchip text-blue-600 text-xl mb-1"></i>
+          <div class="text-sm font-medium text-blue-700">系统推荐</div>
+        </a>
+        <a href="/products" class="p-4 rounded-lg bg-green-50 hover:bg-green-100 transition text-center">
+          <i class="fas fa-list text-green-600 text-xl mb-1"></i>
+          <div class="text-sm font-medium text-green-700">商品列表</div>
+        </a>
+        <a href="/marketing" class="p-4 rounded-lg bg-purple-50 hover:bg-purple-100 transition text-center">
+          <i class="fas fa-tag text-purple-600 text-xl mb-1"></i>
+          <div class="text-sm font-medium text-purple-700">定价建议</div>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadStats() {
+  try {
+    const [products, tasks, accounts] = await Promise.all([
+      api('/api/products?page_size=1'),
+      api('/api/products/tasks'),
+      api('/api/listing/accounts')
+    ]);
+    const total = products.total || 0;
+    document.getElementById('statTotal').textContent = total;
+
+    // 按状态统计
+    const tasksEl = document.getElementById('recentTasks');
+    if (tasks.length) {
+      tasksEl.innerHTML = tasks.slice(0, 5).map(t => 
+        `<div class="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-700 truncate">${t.task_name}</p>
+            <p class="text-xs text-gray-400">${t.method} · ${t.total}个商品</p>
+          </div>
+          <span class="text-xs px-2 py-1 rounded-full ${t.status === 'completed' ? 'bg-green-100 text-green-700' : t.status === 'running' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}">${t.status === 'completed' ? '已完成' : t.status === 'running' ? '进行中' : t.status}</span>
+        </div>`
+      ).join('');
+    } else { tasksEl.innerHTML = '<p class="text-gray-400 text-sm">暂无采集任务</p>'; }
+
+    document.getElementById('statAccounts').textContent = accounts.length || 0;
+
+    // 计数不同状态
+    for (const s of ['collected', 'edited', 'listed']) {
+      const r = await api(`/api/products?status=${s}&page_size=1`);
+      const el = document.getElementById(s === 'collected' ? 'statCollected' : s === 'edited' ? 'statEdited' : 'statListed');
+      if (el) el.textContent = r.total || 0;
+    }
+  } catch(e) { console.error(e); }
+}
+loadStats();
+</script>
+{% endblock %}

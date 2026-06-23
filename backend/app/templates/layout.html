@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}商品管理系统{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: "#eef2ff", 100: "#e0e7ff", 200: "#c7d2fe", 300: "#a5b4fc", 400: "#818cf8", 500: "#6366f1", 600: "#4f46e5", 700: "#4338ca", 800: "#3730a3", 900: "#312e81" }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .sidebar-link.active { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }
+    .status-collected { background: #dbeafe; color: #1d4ed8; }
+    .status-edited { background: #fef3c7; color: #b45309; }
+    .status-listed { background: #d1fae5; color: #047857; }
+    .status-failed { background: #fee2e2; color: #b91c1c; }
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex text-slate-800">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+    <div class="p-5 border-b border-gray-100">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+          <span class="text-white text-xs font-bold">AI</span>
+        </div>
+        <span class="font-bold text-gray-800 text-base">跨境商品 AI 上架助手</span>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1">
+      <a href="/" class="sidebar-link {% if active == 'dashboard' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-brand-50 transition-colors">
+        <i class="fas fa-chart-pie w-5 text-center"></i><span>工作台</span>
+      </a>
+      <a href="/products" class="sidebar-link {% if active == 'products' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-brand-50 transition-colors">
+        <i class="fas fa-cube w-5 text-center"></i><span>商品工作台</span>
+      </a>
+      <a href="/collection" class="sidebar-link {% if active == 'collection' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-brand-50 transition-colors">
+        <i class="fas fa-cloud-download-alt w-5 text-center"></i><span>商品采集</span>
+      </a>
+      <a href="/listing" class="sidebar-link {% if active == 'listing' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-brand-50 transition-colors">
+        <i class="fas fa-upload w-5 text-center"></i><span>上架管理</span>
+      </a>
+      <a href="/marketing" class="sidebar-link {% if active == 'marketing' %}active{% endif %} flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-brand-50 transition-colors">
+        <i class="fas fa-bullhorn w-5 text-center"></i><span>营销优化</span>
+      </a>
+    </nav>
+    <div class="p-4 border-t border-gray-100 text-xs text-gray-500">
+      <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span>本地服务运行中
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 overflow-auto">
+    <div class="p-5 min-w-[980px] max-w-[1800px] mx-auto">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <script>
+    const API = '';
+    async function api(path, opts = {}) {
+      const res = await fetch(API + path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || e.message || '请求失败'); }
+      return res.json().catch(() => ({}));
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

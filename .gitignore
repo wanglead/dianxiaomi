@@ -1,0 +1,39 @@
+# Codex and local workspaces
+.worktrees/
+.superpowers/
+.agents/
+
+# Runtime data and logs
+data/
+backend/data/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# .NET / Visual Studio
+bin/
+obj/
+.vs/
+TestResults/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Windows
+Thumbs.db
+Desktop.ini
