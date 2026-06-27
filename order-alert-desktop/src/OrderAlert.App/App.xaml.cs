@@ -18,6 +18,7 @@ public partial class App : Application
     private const string MutexName = "Local\\OrderAlert.SingleInstance";
     private const string ActivationEventName = "Local\\OrderAlert.Activate";
     private Mutex? _mutex;
+    private SingleInstanceLease? _mutexLease;
     private EventWaitHandle? _activationEvent;
     private CancellationTokenSource? _lifetime;
     private TrayIconService? _tray;
@@ -28,6 +29,9 @@ public partial class App : Application
         base.OnStartup(eventArgs);
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         _mutex = new Mutex(true, MutexName, out var createdNew);
+        _mutexLease = new SingleInstanceLease(
+            createdNew,
+            _mutex.ReleaseMutex);
         if (!createdNew)
         {
             try
@@ -101,7 +105,7 @@ public partial class App : Application
         if (_pipeServer is not null)
             _pipeServer.DisposeAsync().AsTask().GetAwaiter().GetResult();
         _activationEvent?.Dispose();
-        _mutex?.ReleaseMutex();
+        _mutexLease?.Dispose();
         _mutex?.Dispose();
         base.OnExit(eventArgs);
     }

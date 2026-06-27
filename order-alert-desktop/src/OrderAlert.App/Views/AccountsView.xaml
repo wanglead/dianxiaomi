@@ -3,10 +3,21 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <DockPanel Margin="12">
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
-            <Button Content="添加速卖通店铺" Command="{Binding AddAccountCommand}" Padding="14,7"/>
+            <Button Content="添加店小秘账号"
+                    Command="{Binding AddDianxiaomiAccountCommand}"
+                    Padding="14,7"/>
+            <Button Content="添加速卖通店铺"
+                    Command="{Binding AddAliExpressAccountCommand}"
+                    Padding="14,7"
+                    Margin="8,0,0,0"/>
             <Button Content="重新登录" Command="{Binding ReloginCommand}" Padding="14,7"
                     Margin="8,0,0,0"/>
         </StackPanel>
+        <TextBlock DockPanel.Dock="Top"
+                   Text="{Binding LastError}"
+                   Foreground="#C62828"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,10"/>
         <DataGrid ItemsSource="{Binding Accounts}" SelectedItem="{Binding SelectedAccount}"
                   AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
                   BorderThickness="0">
