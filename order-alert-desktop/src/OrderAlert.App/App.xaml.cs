@@ -56,7 +56,8 @@ public partial class App : Application
         await store.InitializeAsync();
         var accountService = new AccountService(store);
         var autoStart = new AutoStartService();
-        var extensionDirectory = Path.Combine(AppContext.BaseDirectory, "extension");
+        var extensionDirectory = new ExtensionDirectoryResolver().Resolve(
+            AppContext.BaseDirectory);
         var launcher = new ChromeProfileLauncher(extensionDirectory);
         _pipeServer = new NativeHostPipeServer();
         _ = _pipeServer.RunAsync(_lifetime.Token);
