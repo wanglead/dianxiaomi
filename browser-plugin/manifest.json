@@ -5,6 +5,7 @@
   "description": "一键采集各大平台商品信息，导入到商品采集上架营销系统",
   "permissions": [
     "activeTab",
+    "nativeMessaging",
     "storage",
     "scripting",
     "tabs"
@@ -31,7 +32,7 @@
     }
   },
   "background": {
-    "service_worker": "background.js",
+    "service_worker": "background-entry.js",
     "type": "module"
   },
   "content_scripts": [
@@ -49,6 +50,20 @@
         "https://*.myshopify.com/*"
       ],
       "js": ["content.js"]
+    },
+    {
+      "matches": [
+        "https://*.dianxiaomi.com/web/order/*",
+        "https://csp.aliexpress.com/m_apps/order-manage/orderList*"
+      ],
+      "js": [
+        "order-alert/scan-schema.js",
+        "order-alert/dom-utils.js",
+        "order-alert/dianxiaomi-adapter.js",
+        "order-alert/aliexpress-adapter.js",
+        "order-alert/scan-coordinator.js",
+        "order-alert/content-order-alert.js"
+      ]
     }
   ]
 }
