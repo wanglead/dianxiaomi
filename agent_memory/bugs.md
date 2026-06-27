@@ -7,6 +7,9 @@
 | P1 | `backend/app/templates/index.html` 中脚本出现多余字符，可能导致工作台统计脚本语法错误 | 已修复 | 已移除多余字符并完成页面 200 验证 |
 | P1 | `backend/app/services/listing_service.py` 引用 `PLATFORM_CONFIGS` 但当前文件未定义 | 待修复 | 直接上架流程会失败 |
 | P1 | 订单预警尚未在真实店小秘和速卖通登录页面完成 DOM 验收 | 待用户验收 | fixture、分页失败保护和双向消息链已有自动化测试；遇到验证码或二次验证需人工接管 |
+| P1 | 店铺账号页缺少店小秘登录入口 | 待修复 | 当前 UI 和 `AccountService` 只支持新增速卖通账号 |
+| P1 | 点击新增/重新登录后程序闪退 | 待修复 | 已由 Windows .NET Runtime 事件确认：开发版缺少 `bin/.../extension`，`DirectoryNotFoundException` 未被异步命令捕获 |
+| P2 | 部分退出路径会重复释放未持有的单实例 Mutex | 待修复 | 事件日志记录 `ApplicationException`，需要跟踪 Mutex 所有权后再释放 |
 | P2 | 安装后的 Chrome 扩展 ID 必须与 Native Messaging manifest 一致 | 已防护 | 安装脚本强制传入 32 位扩展 ID，README 说明重新加载后的核对步骤 |
 
 ## 已修复
