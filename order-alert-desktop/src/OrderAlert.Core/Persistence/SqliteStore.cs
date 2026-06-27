@@ -2,10 +2,11 @@ using System.Globalization;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using OrderAlert.Core.Models;
+using OrderAlert.Core.Services;
 
 namespace OrderAlert.Core.Persistence;
 
-public sealed class SqliteStore
+public sealed class SqliteStore : IScanStore
 {
     private readonly string _connectionString;
 
