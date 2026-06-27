@@ -17,10 +17,31 @@ public sealed class AccountService
             "ChromeProfiles");
     }
 
-    public async Task<StoreAccount> AddAliExpressAsync(
+    public Task<StoreAccount> AddDianxiaomiAsync(
         string displayName,
         string accountIdentifier,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        AddAsync(
+            PlatformKind.Dianxiaomi,
+            displayName,
+            accountIdentifier,
+            cancellationToken);
+
+    public Task<StoreAccount> AddAliExpressAsync(
+        string displayName,
+        string accountIdentifier,
+        CancellationToken cancellationToken = default) =>
+        AddAsync(
+            PlatformKind.AliExpress,
+            displayName,
+            accountIdentifier,
+            cancellationToken);
+
+    private async Task<StoreAccount> AddAsync(
+        PlatformKind platform,
+        string displayName,
+        string accountIdentifier,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(displayName))
             throw new ArgumentException("Display name is required.", nameof(displayName));
@@ -30,7 +51,7 @@ public sealed class AccountService
         var id = Guid.NewGuid();
         var account = new StoreAccount(
             id,
-            PlatformKind.AliExpress,
+            platform,
             displayName.Trim(),
             accountIdentifier.Trim(),
             Path.Combine(_profilesRoot, id.ToString("N")));

@@ -22,6 +22,40 @@ public sealed class SqliteStoreTests
     }
 
     [Fact]
+    public async Task Creates_dianxiaomi_and_aliexpress_accounts_with_isolated_profiles()
+    {
+        await WithStore(async (store, root) =>
+        {
+            var service = new AccountService(store, Path.Combine(root, "profiles"));
+            var dianxiaomi = await service.AddDianxiaomiAsync("店小秘一号", "dxm-owner");
+            var aliexpress = await service.AddAliExpressAsync("速卖通美国店", "ali-owner");
+
+            Assert.Equal(PlatformKind.Dianxiaomi, dianxiaomi.Platform);
+            Assert.Equal(PlatformKind.AliExpress, aliexpress.Platform);
+            Assert.NotEqual(dianxiaomi.ProfilePath, aliexpress.ProfilePath);
+            Assert.Contains(dianxiaomi.Id.ToString("N"), dianxiaomi.ProfilePath);
+            Assert.Contains(aliexpress.Id.ToString("N"), aliexpress.ProfilePath);
+        });
+    }
+
+    [Theory]
+    [InlineData("", "owner")]
+    [InlineData("store", "")]
+    public async Task Both_platforms_reject_blank_account_fields(
+        string displayName,
+        string identifier)
+    {
+        await WithStore(async (store, root) =>
+        {
+            var service = new AccountService(store, root);
+            await Assert.ThrowsAsync<ArgumentException>(
+                () => service.AddDianxiaomiAsync(displayName, identifier));
+            await Assert.ThrowsAsync<ArgumentException>(
+                () => service.AddAliExpressAsync(displayName, identifier));
+        });
+    }
+
+    [Fact]
     public async Task Same_order_number_in_two_stores_remains_isolated()
     {
         await WithStore(async (store, root) =>
