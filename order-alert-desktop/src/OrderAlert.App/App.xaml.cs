@@ -7,6 +7,9 @@ using OrderAlert.App.Tray;
 using OrderAlert.App.ViewModels;
 using OrderAlert.Core.Accounts;
 using OrderAlert.Core.Persistence;
+using OrderAlert.Core.Chrome;
+using OrderAlert.Core.Messaging;
+using OrderAlert.Core.Services;
 
 namespace OrderAlert.App;
 
@@ -18,6 +21,7 @@ public partial class App : Application
     private EventWaitHandle? _activationEvent;
     private CancellationTokenSource? _lifetime;
     private TrayIconService? _tray;
+    private NativeHostPipeServer? _pipeServer;
 
     protected override async void OnStartup(StartupEventArgs eventArgs)
     {
@@ -53,11 +57,19 @@ public partial class App : Application
         var accountService = new AccountService(store);
         var autoStart = new AutoStartService();
         var extensionDirectory = Path.Combine(AppContext.BaseDirectory, "extension");
+        var launcher = new ChromeProfileLauncher(extensionDirectory);
+        _pipeServer = new NativeHostPipeServer();
+        _ = _pipeServer.RunAsync(_lifetime.Token);
+        var orchestrator = new ScanOrchestrator(
+            launcher,
+            new NativePipeScanBridge(_pipeServer),
+            store);
         var actions = new DesktopActions(
             store,
             accountService,
             autoStart,
-            extensionDirectory);
+            launcher,
+            orchestrator);
         var viewModel = new MainViewModel(actions)
         {
             Settings = await store.GetSettingsAsync(),
@@ -85,6 +97,8 @@ public partial class App : Application
     {
         _lifetime?.Cancel();
         _tray?.Dispose();
+        if (_pipeServer is not null)
+            _pipeServer.DisposeAsync().AsTask().GetAwaiter().GetResult();
         _activationEvent?.Dispose();
         _mutex?.ReleaseMutex();
         _mutex?.Dispose();

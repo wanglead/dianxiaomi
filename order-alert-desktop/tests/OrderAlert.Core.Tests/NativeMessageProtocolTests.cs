@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.IO.Pipes;
 using OrderAlert.Core.Messaging;
 
 namespace OrderAlert.Core.Tests;
@@ -44,5 +45,40 @@ public sealed class NativeMessageProtocolTests
 
         await Assert.ThrowsAsync<InvalidDataException>(
             () => NativeMessageProtocol.WriteAsync(new MemoryStream(), message));
+    }
+
+    [Fact]
+    public async Task Named_pipe_server_can_initiate_a_request_and_preserve_its_id()
+    {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var server = new NativeHostPipeServer();
+        var run = server.RunAsync(cancellation.Token);
+        await using var host = new NamedPipeClientStream(
+            ".",
+            NativeHostPipeClient.PipeName,
+            PipeDirection.InOut,
+            PipeOptions.Asynchronous);
+        await host.ConnectAsync(cancellation.Token);
+        var hostPump = Task.Run(async () =>
+        {
+            var request = await NativeMessageProtocol.ReadAsync(host, cancellation.Token);
+            await NativeMessageProtocol.WriteAsync(
+                host,
+                new NativeEnvelope(request!.RequestId, "scanResult", request.Payload, null),
+                cancellation.Token);
+        }, cancellation.Token);
+
+        var response = await server.SendAsync(
+            new NativeEnvelope(
+                "pipe-request",
+                "scanAccount",
+                JsonSerializer.SerializeToElement(new { url = "https://example.invalid" }),
+                null),
+            cancellation.Token);
+
+        Assert.Equal("pipe-request", response.RequestId);
+        await hostPump;
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
     }
 }

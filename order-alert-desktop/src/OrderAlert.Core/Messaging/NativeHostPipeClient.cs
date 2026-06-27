@@ -13,38 +13,36 @@ public sealed class NativeHostPipeClient
         _applicationPath = applicationPath;
     }
 
-    public async Task<NativeEnvelope> RelayAsync(
-        NativeEnvelope request,
+    public async Task RunRelayAsync(
+        Stream browserInput,
+        Stream browserOutput,
         CancellationToken cancellationToken = default)
+    {
+        await using var pipe = await ConnectAsync(cancellationToken);
+        var appToBrowser = PumpAsync(pipe, browserOutput, cancellationToken);
+        var browserToApp = PumpAsync(browserInput, pipe, cancellationToken);
+        await Task.WhenAny(appToBrowser, browserToApp);
+    }
+
+    private async Task<NamedPipeClientStream> ConnectAsync(
+        CancellationToken cancellationToken)
     {
         try
         {
-            return await RelayOnceAsync(request, TimeSpan.FromSeconds(1), cancellationToken);
+            return await ConnectOnceAsync(TimeSpan.FromSeconds(1), cancellationToken);
         }
         catch (TimeoutException) when (!string.IsNullOrWhiteSpace(_applicationPath))
         {
             Process.Start(new ProcessStartInfo(_applicationPath!) { UseShellExecute = true });
-            try
-            {
-                return await RelayOnceAsync(request, TimeSpan.FromSeconds(10), cancellationToken);
-            }
-            catch (Exception error) when (error is TimeoutException or IOException)
-            {
-                return new NativeEnvelope(
-                    request.RequestId,
-                    "error",
-                    null,
-                    new NativeError("APP_UNAVAILABLE", error.Message));
-            }
+            return await ConnectOnceAsync(TimeSpan.FromSeconds(10), cancellationToken);
         }
     }
 
-    private static async Task<NativeEnvelope> RelayOnceAsync(
-        NativeEnvelope request,
+    private static async Task<NamedPipeClientStream> ConnectOnceAsync(
         TimeSpan timeout,
         CancellationToken cancellationToken)
     {
-        await using var pipe = new NamedPipeClientStream(
+        var pipe = new NamedPipeClientStream(
             ".",
             PipeName,
             PipeDirection.InOut,
@@ -55,13 +53,25 @@ public sealed class NativeHostPipeClient
         try
         {
             await pipe.ConnectAsync(timeoutSource.Token);
+            return pipe;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
+            pipe.Dispose();
             throw new TimeoutException("Order Alert application pipe is unavailable.");
         }
-        await NativeMessageProtocol.WriteAsync(pipe, request, cancellationToken);
-        return await NativeMessageProtocol.ReadAsync(pipe, cancellationToken)
-            ?? throw new EndOfStreamException("Application pipe closed without a response.");
+    }
+
+    private static async Task PumpAsync(
+        Stream input,
+        Stream output,
+        CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var message = await NativeMessageProtocol.ReadAsync(input, cancellationToken);
+            if (message is null) return;
+            await NativeMessageProtocol.WriteAsync(output, message, cancellationToken);
+        }
     }
 }

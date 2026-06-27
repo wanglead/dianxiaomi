@@ -1,6 +1,8 @@
 using OrderAlert.Core.Chrome;
 using OrderAlert.Core.Models;
+using OrderAlert.Core.Messaging;
 using OrderAlert.Core.Services;
+using System.Text.Json;
 
 namespace OrderAlert.Core.Tests;
 
@@ -57,6 +59,47 @@ public sealed class ScanOrchestratorTests
         Assert.Equal(ScanStatus.SkippedDisabled, result.Status);
         Assert.Equal(0, launcher.Count);
         Assert.Equal(0, store.CommitCount);
+    }
+
+    [Fact]
+    public async Task Native_pipe_bridge_converts_extension_orders_to_account_snapshot()
+    {
+        var response = new NativeEnvelope(
+            "ignored",
+            "scanResult",
+            JsonSerializer.SerializeToElement(new
+            {
+                ok = true,
+                batch = new
+                {
+                    complete = true,
+                    pageCount = 1,
+                    orders = new[]
+                    {
+                        new
+                        {
+                            orderId = "815209",
+                            sourceUrl = "https://example.invalid/order",
+                            assessmentAt = (string?)null,
+                            shippingSeconds = 3600,
+                            rawStatus = "Awaiting shipment"
+                        }
+                    }
+                }
+            }),
+            null);
+        var account = Account();
+        var bridge = new NativePipeScanBridge(new FakeChannel(response));
+
+        var batch = await bridge.ScanAsync(
+            account,
+            ["https://example.invalid/orders"],
+            CancellationToken.None);
+
+        var order = Assert.Single(batch.Orders);
+        Assert.Equal(account.Id, order.AccountId);
+        Assert.Equal("815209", order.OrderId);
+        Assert.True(batch.Complete);
     }
 
     private static ScanOrchestrator Create(
@@ -135,5 +178,20 @@ public sealed class ScanOrchestratorTests
             FailureCount += 1;
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class FakeChannel : INativeCommandChannel
+    {
+        private readonly NativeEnvelope _response;
+
+        public FakeChannel(NativeEnvelope response)
+        {
+            _response = response;
+        }
+
+        public Task<NativeEnvelope> SendAsync(
+            NativeEnvelope request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(_response with { RequestId = request.RequestId });
     }
 }

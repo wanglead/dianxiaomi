@@ -5,6 +5,7 @@ using OrderAlert.Core.Accounts;
 using OrderAlert.Core.Chrome;
 using OrderAlert.Core.Models;
 using OrderAlert.Core.Persistence;
+using OrderAlert.Core.Services;
 
 namespace OrderAlert.App.ViewModels;
 
@@ -13,18 +14,21 @@ public sealed class DesktopActions : IOrderAlertActions
     private readonly SqliteStore _store;
     private readonly AccountService _accounts;
     private readonly AutoStartService _autoStart;
-    private readonly string _extensionDirectory;
+    private readonly IChromeProfileLauncher _launcher;
+    private readonly ScanOrchestrator _orchestrator;
 
     public DesktopActions(
         SqliteStore store,
         AccountService accounts,
         AutoStartService autoStart,
-        string extensionDirectory)
+        IChromeProfileLauncher launcher,
+        ScanOrchestrator orchestrator)
     {
         _store = store;
         _accounts = accounts;
         _autoStart = autoStart;
-        _extensionDirectory = extensionDirectory;
+        _launcher = launcher;
+        _orchestrator = orchestrator;
     }
 
     public event Action<StoreAccount>? AccountAdded;
@@ -34,7 +38,7 @@ public sealed class DesktopActions : IOrderAlertActions
         foreach (var account in (await _accounts.ListAsync(cancellationToken))
                      .Where(account => account.IsEnabled))
         {
-            await LaunchAccountAsync(account, cancellationToken);
+            await _orchestrator.ScanAccountAsync(account, cancellationToken);
         }
     }
 
@@ -82,13 +86,12 @@ public sealed class DesktopActions : IOrderAlertActions
         StoreAccount account,
         CancellationToken cancellationToken)
     {
-        var launcher = new ChromeProfileLauncher(_extensionDirectory);
         var urls = account.Platform == PlatformKind.Dianxiaomi
             ? new[] { "https://www.dianxiaomi.com/web/order/paid?go=m100" }
             : new[]
             {
                 "https://csp.aliexpress.com/m_apps/order-manage/orderList?channelId=244176"
             };
-        return launcher.LaunchAsync(account, urls, cancellationToken);
+        return _launcher.LaunchAsync(account, urls, cancellationToken);
     }
 }
