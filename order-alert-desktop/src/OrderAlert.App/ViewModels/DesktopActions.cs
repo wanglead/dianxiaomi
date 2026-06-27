@@ -59,20 +59,40 @@ public sealed class DesktopActions : IOrderAlertActions
                 ?? throw new InvalidOperationException("无法确定程序路径。"));
     }
 
-    public async Task AddAccountAsync(CancellationToken cancellationToken)
+    public Task AddDianxiaomiAccountAsync(CancellationToken cancellationToken) =>
+        AddAccountAsync(
+            PlatformKind.Dianxiaomi,
+            "添加店小秘账号",
+            cancellationToken);
+
+    public Task AddAliExpressAccountAsync(CancellationToken cancellationToken) =>
+        AddAccountAsync(
+            PlatformKind.AliExpress,
+            "添加速卖通店铺",
+            cancellationToken);
+
+    private async Task AddAccountAsync(
+        PlatformKind platform,
+        string dialogTitle,
+        CancellationToken cancellationToken)
     {
         var displayName = Interaction.InputBox(
             "请输入店铺显示名称：",
-            "添加速卖通店铺");
+            dialogTitle);
         if (string.IsNullOrWhiteSpace(displayName)) return;
         var identifier = Interaction.InputBox(
             "请输入账号标识（不需要密码）：",
-            "添加速卖通店铺");
+            dialogTitle);
         if (string.IsNullOrWhiteSpace(identifier)) return;
-        var account = await _accounts.AddAliExpressAsync(
-            displayName,
-            identifier,
-            cancellationToken);
+        var account = platform == PlatformKind.Dianxiaomi
+            ? await _accounts.AddDianxiaomiAsync(
+                displayName,
+                identifier,
+                cancellationToken)
+            : await _accounts.AddAliExpressAsync(
+                displayName,
+                identifier,
+                cancellationToken);
         AccountAdded?.Invoke(account);
         await LaunchAccountAsync(account, cancellationToken);
     }
@@ -86,12 +106,9 @@ public sealed class DesktopActions : IOrderAlertActions
         StoreAccount account,
         CancellationToken cancellationToken)
     {
-        var urls = account.Platform == PlatformKind.Dianxiaomi
-            ? new[] { "https://www.dianxiaomi.com/web/order/paid?go=m100" }
-            : new[]
-            {
-                "https://csp.aliexpress.com/m_apps/order-manage/orderList?channelId=244176"
-            };
-        return _launcher.LaunchAsync(account, urls, cancellationToken);
+        return _launcher.LaunchAsync(
+            account,
+            AccountLoginTargets.For(account.Platform),
+            cancellationToken);
     }
 }

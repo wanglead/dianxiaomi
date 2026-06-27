@@ -57,6 +57,37 @@ public sealed class MainViewModelTests
                 AppSettings.Default with { CheckIntervalMinutes = interval }));
     }
 
+    [Fact]
+    public async Task Dianxiaomi_add_failure_is_exposed_without_escaping_the_command()
+    {
+        var actions = new FakeActions
+        {
+            AccountError = new DirectoryNotFoundException("扩展目录不存在")
+        };
+        var viewModel = new MainViewModel(actions);
+
+        await viewModel.AddDianxiaomiAccountCommand.ExecuteAsync(null);
+
+        Assert.Contains("扩展目录不存在", viewModel.LastError);
+    }
+
+    [Fact]
+    public async Task Relogin_failure_is_exposed_without_escaping_the_command()
+    {
+        var actions = new FakeActions
+        {
+            AccountError = new InvalidOperationException("Chrome 启动失败")
+        };
+        var viewModel = new MainViewModel(actions)
+        {
+            SelectedAccount = Account(true)
+        };
+
+        await viewModel.ReloginCommand.ExecuteAsync(null);
+
+        Assert.Contains("Chrome 启动失败", viewModel.LastError);
+    }
+
     private static OrderItemViewModel Order(string id, RiskLevel risk) =>
         new(
             PlatformKind.AliExpress,
@@ -83,6 +114,7 @@ public sealed class MainViewModelTests
     private sealed class FakeActions : IOrderAlertActions
     {
         public bool HoldCheck { get; init; }
+        public Exception? AccountError { get; init; }
         public TaskCompletionSource Started { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } =
@@ -99,5 +131,21 @@ public sealed class MainViewModelTests
         public Task SaveSettingsAsync(
             AppSettings settings,
             CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task AddDianxiaomiAccountAsync(CancellationToken cancellationToken) =>
+            AccountTask();
+
+        public Task AddAliExpressAccountAsync(CancellationToken cancellationToken) =>
+            AccountTask();
+
+        public Task ReloginAsync(
+            StoreAccount account,
+            CancellationToken cancellationToken) =>
+            AccountTask();
+
+        private Task AccountTask() =>
+            AccountError is null
+                ? Task.CompletedTask
+                : Task.FromException(AccountError);
     }
 }

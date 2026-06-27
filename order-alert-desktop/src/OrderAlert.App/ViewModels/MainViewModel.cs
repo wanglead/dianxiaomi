@@ -23,7 +23,10 @@ public interface IOrderAlertActions
     Task CheckNowAsync(CancellationToken cancellationToken);
     Task OpenOrderAsync(OrderItemViewModel order);
     Task SaveSettingsAsync(AppSettings settings, CancellationToken cancellationToken);
-    Task AddAccountAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    Task AddDianxiaomiAccountAsync(CancellationToken cancellationToken) =>
+        Task.CompletedTask;
+    Task AddAliExpressAccountAsync(CancellationToken cancellationToken) =>
+        Task.CompletedTask;
     Task ReloginAsync(StoreAccount account, CancellationToken cancellationToken) =>
         Task.CompletedTask;
 }
@@ -50,12 +53,17 @@ public sealed class MainViewModel : ObservableObject
         CheckNowCommand = new AsyncRelayCommand(CheckNowAsync, () => !IsChecking);
         OpenOrderCommand = new AsyncRelayCommand<OrderItemViewModel>(
             order => order is null ? Task.CompletedTask : _actions.OpenOrderAsync(order));
-        AddAccountCommand = new AsyncRelayCommand(
-            cancellationToken => _actions.AddAccountAsync(cancellationToken));
+        AddDianxiaomiAccountCommand = new AsyncRelayCommand(
+            cancellationToken => ExecuteAccountActionAsync(
+                () => _actions.AddDianxiaomiAccountAsync(cancellationToken)));
+        AddAliExpressAccountCommand = new AsyncRelayCommand(
+            cancellationToken => ExecuteAccountActionAsync(
+                () => _actions.AddAliExpressAccountAsync(cancellationToken)));
         ReloginCommand = new AsyncRelayCommand(
-            cancellationToken => SelectedAccount is null
-                ? Task.CompletedTask
-                : _actions.ReloginAsync(SelectedAccount, cancellationToken));
+            cancellationToken => ExecuteAccountActionAsync(
+                () => SelectedAccount is null
+                    ? Task.CompletedTask
+                    : _actions.ReloginAsync(SelectedAccount, cancellationToken)));
         SaveSettingsCommand = new AsyncRelayCommand(
             cancellationToken => SaveSettingsAsync(Settings, cancellationToken));
     }
@@ -65,7 +73,8 @@ public sealed class MainViewModel : ObservableObject
 
     public IAsyncRelayCommand CheckNowCommand { get; }
     public IAsyncRelayCommand<OrderItemViewModel> OpenOrderCommand { get; }
-    public IAsyncRelayCommand AddAccountCommand { get; }
+    public IAsyncRelayCommand AddDianxiaomiAccountCommand { get; }
+    public IAsyncRelayCommand AddAliExpressAccountCommand { get; }
     public IAsyncRelayCommand ReloginCommand { get; }
     public IAsyncRelayCommand SaveSettingsCommand { get; }
 
@@ -246,6 +255,19 @@ public sealed class MainViewModel : ObservableObject
         finally
         {
             IsChecking = false;
+        }
+    }
+
+    private async Task ExecuteAccountActionAsync(Func<Task> action)
+    {
+        LastError = null;
+        try
+        {
+            await action();
+        }
+        catch (Exception error)
+        {
+            LastError = error.Message;
         }
     }
 
