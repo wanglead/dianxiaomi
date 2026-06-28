@@ -1,0 +1,9 @@
+{
+  "name": "com.orderalert.native_host",
+  "description": "Order Alert Chrome native messaging host",
+  "path": "ORDER_ALERT_NATIVE_HOST_PATH",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://ORDER_ALERT_EXTENSION_ID/"
+  ]
+}

@@ -1,0 +1,93 @@
+<Window x:Class="OrderAlert.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:OrderAlert.App.Views"
+        Title="订单临期预警" Height="760" Width="1180"
+        MinHeight="620" MinWidth="960"
+        Background="#F5F7FB" Closing="OnClosing">
+    <DockPanel Margin="24">
+        <Border DockPanel.Dock="Top" Background="White" CornerRadius="12"
+                Padding="20" Margin="0,0,0,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="订单临期预警" FontSize="24" FontWeight="SemiBold"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding RunState}" Foreground="#218C5A"/>
+                        <TextBlock Text="  ·  下次检查：" Foreground="#667085"/>
+                        <TextBlock Text="{Binding NextCheckAt, StringFormat={}{0:MM-dd HH:mm}}"
+                                   Foreground="#667085"/>
+                    </StackPanel>
+                </StackPanel>
+                <Button Grid.Column="1" Content="立即检查" Command="{Binding CheckNowCommand}"
+                        Padding="22,10" Background="#356AE6" Foreground="White"
+                        BorderThickness="0"/>
+            </Grid>
+        </Border>
+
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Style="{StaticResource SummaryCard}">
+                <StackPanel><TextBlock Text="24 小时内" Foreground="#667085"/>
+                    <TextBlock Text="{Binding DueSoonCount}" Style="{StaticResource SummaryValue}"/></StackPanel>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource SummaryCard}">
+                <StackPanel><TextBlock Text="2 小时内" Foreground="#667085"/>
+                    <TextBlock Text="{Binding CriticalCount}" Style="{StaticResource SummaryValue}"/></StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource SummaryCard}">
+                <StackPanel><TextBlock Text="已超时" Foreground="#667085"/>
+                    <TextBlock Text="{Binding OverdueCount}" Style="{StaticResource SummaryValue}"/></StackPanel>
+            </Border>
+            <Border Grid.Column="3" Style="{StaticResource SummaryCard}">
+                <StackPanel><TextBlock Text="在线店铺" Foreground="#667085"/>
+                    <TextBlock Text="{Binding OnlineAccountCount}" Style="{StaticResource SummaryValue}"/></StackPanel>
+            </Border>
+        </Grid>
+
+        <TabControl Background="White" BorderThickness="0" Padding="12">
+            <TabItem Header="订单">
+                <DockPanel Margin="8">
+                    <TextBox DockPanel.Dock="Top" Width="280" HorizontalAlignment="Left"
+                             Text="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}"
+                             Padding="10,7" Margin="0,4,0,12"
+                             ToolTip="搜索订单号或店铺"/>
+                    <DataGrid ItemsSource="{Binding FilteredOrders}" AutoGenerateColumns="False"
+                              IsReadOnly="True" CanUserAddRows="False"
+                              GridLinesVisibility="Horizontal" BorderThickness="0">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="平台" Binding="{Binding Platform}" Width="110"/>
+                            <DataGridTextColumn Header="店铺" Binding="{Binding StoreName}" Width="150"/>
+                            <DataGridTextColumn Header="订单号" Binding="{Binding OrderId}" Width="*"/>
+                            <DataGridTextColumn Header="状态" Binding="{Binding RawStatus}" Width="140"/>
+                            <DataGridTextColumn Header="考核时间"
+                                Binding="{Binding AssessmentAt, StringFormat={}{0:MM-dd HH:mm}}" Width="130"/>
+                            <DataGridTextColumn Header="剩余秒数" Binding="{Binding ShippingSeconds}" Width="100"/>
+                            <DataGridTextColumn Header="风险" Binding="{Binding Risk}" Width="90"/>
+                            <DataGridTemplateColumn Header="操作" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="打开" Padding="8,3"
+                                            Command="{Binding DataContext.OpenOrderCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+            <TabItem Header="店铺账号"><views:AccountsView/></TabItem>
+            <TabItem Header="提醒设置"><views:SettingsView/></TabItem>
+            <TabItem Header="检查记录">
+                <TextBlock Margin="20" Text="扫描成功、失败与可操作错误会显示在这里。"
+                           Foreground="#667085"/>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>
